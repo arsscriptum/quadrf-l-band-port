@@ -23,6 +23,23 @@
 //
 // Run:
 //   ./csi_sweep
+//
+// ===================================================================================
+// 
+// L-Band Fork Specific Changes
+// -----------------------------
+//
+// 5-6-2026 - First custom change in the repo (still analysing), dont mind issues.
+// - Reusability for L-band: 
+//   - changed  physical vertical spacing 19cm for 0.83Î» of Frey's 1.31 GHz
+//   - changed horizontal spacing to 32.7cm proportionally from above
+//   - Need to plumb in: replace the /dev/csi_stream0 ring buffer reads with reads from 4Ã— synchronized SDRs (HackRF or otherwise)
+//   - The rest, as I see it, seems to be frequency-agnostic.
+//
+// Guillaume Plante <gp@arsscriptum.ca>
+//
+// ===================================================================================
+//
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,8 +90,16 @@
 
 // Antenna Geometry
 #define SPEED_OF_LIGHT   299792458.0f
-#define ANT_DIST_VERT    0.045f       // 4.5 cm (Index 0 to 2)
-#define ANT_DIST_HORIZ   0.078f       // 7.8 cm (Index 1 to 3)
+
+//#define ANT_DIST_VERT    0.045f       // 4.5 cm (Index 0 to 2)
+//#define ANT_DIST_HORIZ   0.078f       // 7.8 cm (Index 1 to 3)
+
+// L-Band
+// wip: the FFT, complex conjugate multiplication, atan2 unwrapping, SDL2 visualization, and HSV color mapping all work unchanged? needs confirm.
+
+#define ANT_DIST_VERT    0.19f          // 0.190m for 0.83Î» at 1.31 GHz (aiming Frey's frequency)
+#define ANT_DIST_HORIZ   0.327f         // 0.327m proportionally from above
+
 
 #define CALIB_PHASE_V    (3.14159f)  
 #define CALIB_PHASE_H    (3.14159f)
@@ -327,10 +352,10 @@ static void cs8_to_fftw_ch(const int8_t *src, int ch, fftwf_complex *dst)
 static uint16_t max2851_lna_band_reg2_for_freq(double mhz)
 {
     /* Main2: LNA_BAND[1:0] at D[6:5]; keep reserved bits at default. */
-    if (mhz < 5200.0) return 0x180;  /* 00: 4.9–5.2 GHz */
-    if (mhz < 5500.0) return 0x1A0;  /* 01: 5.2–5.5 GHz (default) */
-    if (mhz < 5800.0) return 0x1C0;  /* 10: 5.5–5.8 GHz */
-    return 0x1E0;                    /* 11: 5.8–5.9 GHz */
+    if (mhz < 5200.0) return 0x180;  /* 00: 4.9â€“5.2 GHz */
+    if (mhz < 5500.0) return 0x1A0;  /* 01: 5.2â€“5.5 GHz (default) */
+    if (mhz < 5800.0) return 0x1C0;  /* 10: 5.5â€“5.8 GHz */
+    return 0x1E0;                    /* 11: 5.8â€“5.9 GHz */
 }
 
 static int program_set_freq(int fd, double freq_mhz)
